@@ -179,8 +179,8 @@
 
 <header class="hero">
   <div class="container">
-    <h1 data-i18n-html="hero_h1">One <span class="grad">Task</span>,<br>three places it can live</h1>
-    <p class="sub" data-i18n="hero_sub">A markdown file, a local SQLite database, or a Plane project — all through the same push()/list() interface, so your code never has to know where a task actually ends up.</p>
+    <h1 data-i18n-html="hero_h1">Push tasks to <span class="grad">Plane</span>,<br>without the duplicates</h1>
+    <p class="sub" data-i18n="hero_sub">Idempotent sync via a stable external_id — push the same task twice, get one issue, not two. Markdown and SQLite come along as lightweight local destinations for the same Task, behind the same interface.</p>
     <div class="badges">
       <span class="badge">Python 3.11+</span>
       <span class="badge">MIT License</span>
@@ -220,17 +220,17 @@
 <section id="features">
   <div class="container">
     <h2 data-i18n="f_title">Why meldlane-tasks</h2>
-    <p class="section-sub" data-i18n="f_sub">One contract, swappable backends, idempotent by construction.</p>
+    <p class="section-sub" data-i18n="f_sub">The idempotent Plane sync, done once and tested live — plus lightweight local sinks behind the same interface.</p>
     <div class="grid">
       <div class="card">
-        <div class="icon">🔀</div>
-        <h3 data-i18n="f1_h">Swap the backend, not the call site</h3>
-        <p data-i18n="f1_p">Start with a markdown file, move to SQLite, sync to Plane later — the calling code stays `await sink.push(task)`.</p>
+        <div class="icon">♻️</div>
+        <h3 data-i18n="f1_h">The idempotent Plane sync, done once</h3>
+        <p data-i18n="f1_p">external_id/external_source + handling Plane's 409-on-duplicate by PATCHing instead — easy to get subtly wrong the first time. Verified live: 13 tasks pushed twice, still 13 issues.</p>
       </div>
       <div class="card">
-        <div class="icon">♻️</div>
-        <h3 data-i18n="f2_h">Idempotent by construction</h3>
-        <p data-i18n="f2_p">PlaneSink derives a stable external_id from your task id. Pushing the same task twice updates it — verified live: 13 tasks pushed twice, still 13 issues.</p>
+        <div class="icon">🔀</div>
+        <h3 data-i18n="f2_h">Swap the backend, not the call site</h3>
+        <p data-i18n="f2_p">Same Task, same push()/list(), whether it lands in a markdown file, SQLite, or Plane.</p>
       </div>
       <div class="card">
         <div class="icon">⚖️</div>
@@ -329,16 +329,16 @@ document.querySelectorAll("[data-copy]").forEach(b => {
 const I18N = {
   en: {
     nav_features: "Features", nav_sinks: "Sinks", nav_install: "Install", copy: "copy",
-    hero_h1: 'One <span class="grad">Task</span>,<br>three places it can live',
-    hero_sub: "A markdown file, a local SQLite database, or a Plane project — all through the same push()/list() interface, so your code never has to know where a task actually ends up.",
+    hero_h1: 'Push tasks to <span class="grad">Plane</span>,<br>without the duplicates',
+    hero_sub: "Idempotent sync via a stable external_id — push the same task twice, get one issue, not two. Markdown and SQLite come along as lightweight local destinations for the same Task, behind the same interface.",
     badge_lib: "Library, not a service",
     cta_github: "View on GitHub", cta_install: "Install",
     f_title: "Why meldlane-tasks",
-    f_sub: "One contract, swappable backends, idempotent by construction.",
-    f1_h: "Swap the backend, not the call site",
-    f1_p: "Start with a markdown file, move to SQLite, sync to Plane later — the calling code stays await sink.push(task).",
-    f2_h: "Idempotent by construction",
-    f2_p: "PlaneSink derives a stable external_id from your task id. Pushing the same task twice updates it — verified live: 13 tasks pushed twice, still 13 issues.",
+    f_sub: "The idempotent Plane sync, done once and tested live — plus lightweight local sinks behind the same interface.",
+    f1_h: "The idempotent Plane sync, done once",
+    f1_p: "external_id/external_source + handling Plane's 409-on-duplicate by PATCHing instead — easy to get subtly wrong the first time. Verified live: 13 tasks pushed twice, still 13 issues.",
+    f2_h: "Swap the backend, not the call site",
+    f2_p: "Same Task, same push()/list(), whether it lands in a markdown file, SQLite, or Plane.",
     f3_h: "Honest about the gaps",
     f3_p: "Plane expects assignee to be a real user account — this library doesn't fake agent-as-assignee support. Assignee, story points and source go into the description as text.",
     f4_h: "Library, not a service",
@@ -358,16 +358,16 @@ const I18N = {
   },
   ru: {
     nav_features: "Возможности", nav_sinks: "Sinks", nav_install: "Установка", copy: "копир.",
-    hero_h1: 'Одна <span class="grad">Task</span>,<br>три места, где она живёт',
-    hero_sub: "Markdown-файл, локальная SQLite-база или проект в Plane — всё через один и тот же интерфейс push()/list(), так что твоему коду не нужно знать, куда именно попадает задача.",
+    hero_h1: 'Пуш задач в <span class="grad">Plane</span>,<br>без дублей',
+    hero_sub: "Идемпотентный синк на стабильном external_id — пушни задачу дважды, получи один issue, не два. Markdown и SQLite идут как лёгкие локальные destination'ы для той же Task, через тот же интерфейс.",
     badge_lib: "Библиотека, не сервис",
     cta_github: "Открыть на GitHub", cta_install: "Установить",
     f_title: "Зачем meldlane-tasks",
-    f_sub: "Один контракт, взаимозаменяемые бэкенды, идемпотентность по конструкции.",
-    f1_h: "Меняй бэкенд, не место вызова",
-    f1_p: "Начни с markdown-файла, перейди на SQLite, синхронизируй в Plane позже — вызывающий код остаётся await sink.push(task).",
-    f2_h: "Идемпотентность по конструкции",
-    f2_p: "PlaneSink получает стабильный external_id из id задачи. Повторный push той же задачи обновляет её — проверено вживую: 13 задач запушены дважды, issues по-прежнему 13.",
+    f_sub: "Идемпотентный синк в Plane, сделанный один раз и проверенный вживую — плюс лёгкие локальные sinks через тот же интерфейс.",
+    f1_h: "Идемпотентный синк в Plane, сделан один раз",
+    f1_p: "external_id/external_source + обработка 409-на-дубль через PATCH — легко сделать неправильно с первого раза. Проверено вживую: 13 задач запушены дважды, issues по-прежнему 13.",
+    f2_h: "Меняй бэкенд, не место вызова",
+    f2_p: "Одна и та же Task, тот же push()/list(), попадает ли она в markdown-файл, SQLite или Plane.",
     f3_h: "Честность про пробелы",
     f3_p: "Plane ожидает, что assignee — реальный аккаунт пользователя — библиотека не изображает поддержку «агент как assignee». Исполнитель, story points и источник идут в описание текстом.",
     f4_h: "Библиотека, не сервис",

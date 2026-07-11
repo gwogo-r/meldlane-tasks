@@ -4,14 +4,16 @@
 
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
-One `Task` model, three places it can live: a markdown table, a local SQLite file, or a Plane project — all through the same `push()`/`list()` interface, so your code doesn't need to know or care where a task ends up.
+Push tasks into [Plane](https://plane.so) programmatically without re-solving the same problem everyone hits first: **how do you sync the same task twice without creating a duplicate issue?** `PlaneSink` answers that with a stable `external_id` derived from your task's own id — push it again and it updates the existing issue instead. Verified live against a real Plane instance: 13 tasks pushed twice, still 13 issues.
+
+`MarkdownSink` and `SqliteSink` are included as lightweight, no-dependency destinations for the same `Task` — useful if you want a local record before (or instead of) syncing to Plane, behind the same `push()`/`list()` interface.
 
 A library, not a service — no server, no config file, just functions.
 
 ## Why
 
-- **Swap the backend without touching call sites.** Start with a markdown file, move to SQLite, sync to Plane later — the calling code stays `await sink.push(task)`.
-- **Idempotent by construction.** `PlaneSink` uses a stable `external_id` derived from your task id; pushing the same task twice updates it instead of creating a duplicate. Verified live: 13 tasks pushed twice, still 13 issues.
+- **The idempotent Plane sync, done once.** `external_id`/`external_source` + handling Plane's 409-on-duplicate by PATCHing instead — a few lines that are easy to get subtly wrong the first time you write them. This library got them right and tested against a live instance, so you don't have to rediscover it.
+- **Swap the backend without touching call sites.** Same `Task`, same `push()`/`list()`, whether it lands in a markdown file, SQLite, or Plane.
 - **Honest about what it doesn't solve.** Plane expects an `assignee` to be a real workspace user account — this library doesn't fake agent-as-assignee support. Assignee name, story points and source go into the issue description as text instead of a native field.
 
 ## Install
