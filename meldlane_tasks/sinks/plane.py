@@ -19,7 +19,7 @@ import httpx
 from ..models import Task
 from .base import TaskSink
 
-EXTERNAL_SOURCE = "meldlane-tasks"
+DEFAULT_EXTERNAL_SOURCE = "meldlane-tasks"
 
 
 def _external_id(task: Task) -> str:
@@ -43,12 +43,21 @@ def _description(task: Task, assignee_name: str | None) -> str:
 
 
 class PlaneSink(TaskSink):
-    def __init__(self, base_url: str, api_token: str, workspace: str, project_id: str):
+    def __init__(self, base_url: str, api_token: str, workspace: str, project_id: str,
+                 external_source: str = DEFAULT_EXTERNAL_SOURCE):
+        """external_source: тег, которым помечаются созданные issues (идемпотентность
+        и фильтр в list() — см. модуль). Два PlaneSink с разным external_source, указывающие
+        на один и тот же project_id, не видят и не трогают задачи друг друга — это нашли
+        на практике (Meldlane 2026-07-12): переключение вызывающего кода со старого прямого
+        клиента на эту библиотеку без явного совпадения external_source создало 13 дублей
+        issues вместо обновления существующих. Если мигрируешь с самописного клиента —
+        передай его прежний external_source сюда явно."""
         if not (base_url and api_token and workspace and project_id):
             raise ValueError("PlaneSink: base_url, api_token, workspace и project_id обязательны")
         self.base_url = base_url.rstrip("/")
         self.workspace = workspace
         self.project_id = project_id
+        self.external_source = external_source
         self.headers = {"x-api-key": api_token, "Content-Type": "application/json"}
 
     def _issues_url(self, issue_id: str = "") -> str:
@@ -61,7 +70,7 @@ class PlaneSink(TaskSink):
             "name": task.title[:255],
             "description_html": _description(task, assignee_name or task.assignee_hint),
             "external_id": external_id,
-            "external_source": EXTERNAL_SOURCE,
+            "external_source": self.external_source,
         }
 
         async with httpx.AsyncClient(headers=self.headers, timeout=20) as client:
@@ -86,5 +95,5 @@ class PlaneSink(TaskSink):
         return [
             Task(id=i["id"], title=i["name"])
             for i in items
-            if i.get("external_source") == EXTERNAL_SOURCE
+            if i.get("external_source") == self.external_source
         ]
