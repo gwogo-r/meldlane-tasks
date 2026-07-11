@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>meldlane-tasks — one Task, three places it can live</title>
+<meta name="description" content="One Task model, pushed to a markdown file, SQLite, or a Plane project through the same interface. Idempotent sync, no server, no config file.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📋</text></svg>">
+<style>
+  :root {
+    --bg: #0b0f14;
+    --panel: #11161d;
+    --panel-2: #0e1319;
+    --border: #202b38;
+    --text: #e6edf3;
+    --muted: #8b98a5;
+    --green: #3fb950;
+    --cyan: #58c7f3;
+    --yellow: #d29922;
+    --red: #f85149;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Liberation Mono", monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.65 -apple-system, "Segoe UI", system-ui, Roboto, sans-serif;
+  }
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 980px; margin: 0 auto; padding: 0 20px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(11,15,20,.85); backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner { display: flex; align-items: center; gap: 22px; height: 56px; }
+  .logo { font-weight: 700; font-size: 17px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .logo:hover { text-decoration: none; }
+  .nav-links { display: flex; gap: 18px; margin-left: auto; align-items: center; }
+  .nav-links a { color: var(--muted); font-size: 14px; }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+  #lang-toggle {
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 10px; font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  #lang-toggle:hover { color: var(--text); border-color: var(--muted); }
+
+  .hero { padding: 72px 0 40px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -40% -20% auto; height: 130%;
+    background: radial-gradient(ellipse 55% 45% at 50% 0%, rgba(63,185,80,.14), transparent 70%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6.5vw, 54px); line-height: 1.15; letter-spacing: -1px;
+    margin-bottom: 18px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(90deg, var(--green), var(--cyan));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero p.sub { color: var(--muted); font-size: 19px; max-width: 640px; margin: 0 auto 30px; }
+  .badges { display: flex; gap: 10px; justify-content: center; margin-bottom: 30px; flex-wrap: wrap; }
+  .badge {
+    font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px;
+    background: var(--panel);
+  }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 15px;
+    border: 1px solid transparent; cursor: pointer;
+  }
+  .btn:hover { text-decoration: none; }
+  .btn-primary { background: var(--green); color: #04120a; }
+  .btn-primary:hover { filter: brightness(1.1); }
+  .btn-ghost { border-color: var(--border); color: var(--text); background: var(--panel); }
+  .btn-ghost:hover { border-color: var(--muted); }
+  .pip {
+    margin-top: 26px; display: inline-flex; align-items: center; gap: 12px;
+    font-family: var(--mono); font-size: 14px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .copy-btn {
+    background: none; border: 1px solid var(--border); border-radius: 6px;
+    color: var(--muted); font-size: 12px; padding: 3px 9px; cursor: pointer; font-family: inherit;
+  }
+  .copy-btn:hover { color: var(--text); border-color: var(--muted); }
+
+  .terminal {
+    margin: 46px auto 0; max-width: 780px; text-align: left;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0,0,0,.45);
+    overflow: hidden;
+  }
+  .term-bar {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; } .dot.y { background: #febc2e; } .dot.g { background: #28c840; }
+  .term-title { color: var(--muted); font-size: 12.5px; font-family: var(--mono); margin-left: 8px; }
+  .term-body { padding: 16px 18px; overflow-x: auto; }
+  .term-body pre { font-family: var(--mono); font-size: 12.5px; line-height: 1.55; color: var(--text); }
+  .t-dim { color: var(--muted); }
+  .t-green { color: var(--green); }
+  .t-cyan { color: var(--cyan); }
+  .t-yellow { color: var(--yellow); }
+  .t-bold { font-weight: 700; }
+
+  section { padding: 64px 0; border-top: 1px solid var(--border); }
+  h2 { font-size: 30px; letter-spacing: -.5px; margin-bottom: 10px; }
+  .section-sub { color: var(--muted); margin-bottom: 36px; max-width: 620px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+  .card .icon { font-size: 26px; margin-bottom: 12px; }
+  .card h3 { font-size: 16.5px; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 14.5px; }
+
+  .codeblock {
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 18px; margin: 14px 0; position: relative; overflow-x: auto;
+  }
+  .codeblock pre { font-family: var(--mono); font-size: 13.5px; line-height: 1.7; }
+  .codeblock .copy-btn { position: absolute; top: 10px; right: 10px; background: var(--panel); }
+  .codeblock .cmt { color: var(--muted); }
+  .codeblock .kw { color: var(--green); }
+  .codeblock .str { color: var(--cyan); }
+
+  table.sinks { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+  table.sinks th, table.sinks td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  table.sinks th { color: var(--muted); font-weight: 600; font-size: 12.5px; text-transform: uppercase; letter-spacing: .04em; }
+  table.sinks td.name { font-family: var(--mono); color: var(--green); white-space: nowrap; }
+  table.sinks td.backend { color: var(--text); white-space: nowrap; }
+  table.sinks td.notes { color: var(--muted); }
+
+  .warn-box {
+    background: rgba(210,153,34,.08); border: 1px solid rgba(210,153,34,.35);
+    border-radius: 12px; padding: 22px 24px; margin-top: 8px;
+  }
+  .warn-box h3 { color: var(--yellow); font-size: 16px; margin-bottom: 10px; }
+  .warn-box p { color: var(--muted); font-size: 14.5px; margin-bottom: 10px; }
+  .warn-box p:last-child { margin-bottom: 0; }
+  .warn-box code { font-family: var(--mono); font-size: 13px; color: var(--text); }
+
+  footer {
+    border-top: 1px solid var(--border); padding: 36px 0 48px;
+    color: var(--muted); font-size: 14px; text-align: center;
+  }
+  footer .links { margin-bottom: 10px; display: flex; gap: 18px; justify-content: center; }
+  @media (max-width: 560px) {
+    .nav-links a:not(#lang-toggle) { display: none; }
+    .hero { padding-top: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container nav-inner">
+    <a class="logo" href="#">📋 meldlane-tasks</a>
+    <div class="nav-links">
+      <a href="#features" data-i18n="nav_features">Features</a>
+      <a href="#sinks" data-i18n="nav_sinks">Sinks</a>
+      <a href="#install" data-i18n="nav_install">Install</a>
+      <a href="#" class="gh-link">GitHub</a>
+      <button id="lang-toggle" title="Switch language">RU</button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container">
+    <h1 data-i18n-html="hero_h1">One <span class="grad">Task</span>,<br>three places it can live</h1>
+    <p class="sub" data-i18n="hero_sub">A markdown file, a local SQLite database, or a Plane project — all through the same push()/list() interface, so your code never has to know where a task actually ends up.</p>
+    <div class="badges">
+      <span class="badge">Python 3.11+</span>
+      <span class="badge">MIT License</span>
+      <span class="badge" data-i18n="badge_lib">Library, not a service</span>
+    </div>
+    <div class="cta">
+      <a class="btn btn-primary gh-link" href="#" data-i18n="cta_github">View on GitHub</a>
+      <a class="btn btn-ghost" href="#install" data-i18n="cta_install">Install</a>
+    </div>
+    <div class="pip">
+      <span style="color:var(--green)">&gt;</span>
+      <span>pip install meldlane-tasks</span>
+      <button class="copy-btn" data-copy="pip install meldlane-tasks" data-i18n="copy">copy</button>
+    </div>
+
+    <div class="terminal">
+      <div class="term-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="term-title">python — meldlane_tasks</span>
+      </div>
+      <div class="term-body">
+<pre><span class="t-dim">&gt;&gt;&gt;</span> <span class="t-cyan">from</span> meldlane_tasks <span class="t-cyan">import</span> Task, MarkdownSink, PlaneSink
+
+<span class="t-dim">&gt;&gt;&gt;</span> task = Task(id=<span class="t-yellow">"MEL-100"</span>, title=<span class="t-yellow">"Fix the login bug"</span>, story_points=3)
+
+<span class="t-dim">&gt;&gt;&gt;</span> <span class="t-cyan">await</span> MarkdownSink(<span class="t-yellow">"backlog.md"</span>).push(task, assignee_name=<span class="t-yellow">"Roman"</span>)
+<span class="t-bold">'MEL-100'</span>                          <span class="t-dim"># written as a table row</span>
+
+<span class="t-dim">&gt;&gt;&gt;</span> <span class="t-cyan">await</span> PlaneSink(base_url=url, api_token=key,
+<span class="t-dim">...</span>     workspace=<span class="t-yellow">"acme"</span>, project_id=pid).push(task)
+<span class="t-bold">'864f40b1-f30c-...'</span>                <span class="t-dim"># real issue UUID, idempotent on re-push</span></pre>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="features">
+  <div class="container">
+    <h2 data-i18n="f_title">Why meldlane-tasks</h2>
+    <p class="section-sub" data-i18n="f_sub">One contract, swappable backends, idempotent by construction.</p>
+    <div class="grid">
+      <div class="card">
+        <div class="icon">🔀</div>
+        <h3 data-i18n="f1_h">Swap the backend, not the call site</h3>
+        <p data-i18n="f1_p">Start with a markdown file, move to SQLite, sync to Plane later — the calling code stays `await sink.push(task)`.</p>
+      </div>
+      <div class="card">
+        <div class="icon">♻️</div>
+        <h3 data-i18n="f2_h">Idempotent by construction</h3>
+        <p data-i18n="f2_p">PlaneSink derives a stable external_id from your task id. Pushing the same task twice updates it — verified live: 13 tasks pushed twice, still 13 issues.</p>
+      </div>
+      <div class="card">
+        <div class="icon">⚖️</div>
+        <h3 data-i18n="f3_h">Honest about the gaps</h3>
+        <p data-i18n="f3_p">Plane expects assignee to be a real user account — this library doesn't fake agent-as-assignee support. Assignee, story points and source go into the description as text.</p>
+      </div>
+      <div class="card">
+        <div class="icon">📦</div>
+        <h3 data-i18n="f4_h">Library, not a service</h3>
+        <p data-i18n="f4_p">No server, no config file, no daemon. Just async functions and a Pydantic model.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="sinks">
+  <div class="container">
+    <h2 data-i18n="s_title">Sinks</h2>
+    <p class="section-sub" data-i18n="s_sub">Three today. The TaskSink interface leaves room for more without breaking existing ones.</p>
+    <table class="sinks">
+      <tr><th data-i18n="s_col_sink">sink</th><th data-i18n="s_col_backend">backend</th><th data-i18n="s_col_notes">notes</th></tr>
+      <tr>
+        <td class="name">MarkdownSink</td><td class="backend" data-i18n="s1_backend">a markdown file</td>
+        <td class="notes" data-i18n="s1_notes">Writes/updates a table row. Human-readable, not a full round-trip.</td>
+      </tr>
+      <tr>
+        <td class="name">SqliteSink</td><td class="backend" data-i18n="s2_backend">local SQLite file</td>
+        <td class="notes" data-i18n="s2_notes">Full round-trip — every Task field survives push() → list().</td>
+      </tr>
+      <tr>
+        <td class="name">PlaneSink</td><td class="backend">Plane REST API</td>
+        <td class="notes" data-i18n="s3_notes">Idempotent via external_id/external_source. list() filters to issues this library created.</td>
+      </tr>
+    </table>
+
+    <h2 style="margin-top:48px" data-i18n="j_title">No Jira / YouTrack adapters</h2>
+    <div class="warn-box">
+      <h3 data-i18n="j_h">⚠ <span data-i18n="j_h2">And that's on purpose</span></h3>
+      <p data-i18n="j1">Writing an integration against an API you can't test live against a real instance produces code nobody should trust. Rather than ship an untested guess, they're simply not here.</p>
+      <p data-i18n="j2">The <code>TaskSink</code> interface is stable enough to add them later — contributions with a real instance to test against are welcome.</p>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="container">
+    <h2 data-i18n="i_title">Install</h2>
+    <p class="section-sub" data-i18n="i_sub">Python 3.11+. No config file — pass credentials to the sink you use.</p>
+    <div class="codeblock">
+      <button class="copy-btn" data-copy="pip install meldlane-tasks" data-i18n="copy">copy</button>
+<pre><span class="cmt"># pip</span>
+<span class="kw">pip</span> install meldlane-tasks</pre>
+    </div>
+    <div class="codeblock">
+      <button class="copy-btn" data-copy="from meldlane_tasks import Task, SqliteSink
+
+sink = SqliteSink(&quot;tasks.db&quot;)
+await sink.push(Task(id=&quot;t1&quot;, title=&quot;Write the docs&quot;))
+tasks = await sink.list()" data-i18n="copy">copy</button>
+<pre><span class="kw">from</span> meldlane_tasks <span class="kw">import</span> Task, SqliteSink
+
+sink = SqliteSink(<span class="str">"tasks.db"</span>)
+<span class="kw">await</span> sink.push(Task(id=<span class="str">"t1"</span>, title=<span class="str">"Write the docs"</span>))
+tasks = <span class="kw">await</span> sink.list()</pre>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="links">
+      <a href="#" class="gh-link">GitHub</a>
+      <a href="#" class="gh-issues" data-i18n="ft_issues">Report an issue</a>
+      <a href="#" class="gh-license">MIT License</a>
+    </div>
+    <div data-i18n="ft_note">Part of the Meldlane toolchain. No telemetry, no ads, no cloud beyond the sink you point it at.</div>
+  </div>
+</footer>
+
+<script>
+const REPO_URL = "https://github.com/gwogo-r/meldlane-tasks";
+
+document.querySelectorAll(".gh-link").forEach(a => a.href = REPO_URL);
+document.querySelectorAll(".gh-issues").forEach(a => a.href = REPO_URL + "/issues");
+document.querySelectorAll(".gh-license").forEach(a => a.href = REPO_URL + "/blob/main/LICENSE");
+document.querySelectorAll("[data-copy]").forEach(b => {
+  b.addEventListener("click", () => {
+    navigator.clipboard.writeText(b.dataset.copy).then(() => {
+      const old = b.textContent;
+      b.textContent = "✓";
+      setTimeout(() => b.textContent = old, 1200);
+    });
+  });
+});
+
+const I18N = {
+  en: {
+    nav_features: "Features", nav_sinks: "Sinks", nav_install: "Install", copy: "copy",
+    hero_h1: 'One <span class="grad">Task</span>,<br>three places it can live',
+    hero_sub: "A markdown file, a local SQLite database, or a Plane project — all through the same push()/list() interface, so your code never has to know where a task actually ends up.",
+    badge_lib: "Library, not a service",
+    cta_github: "View on GitHub", cta_install: "Install",
+    f_title: "Why meldlane-tasks",
+    f_sub: "One contract, swappable backends, idempotent by construction.",
+    f1_h: "Swap the backend, not the call site",
+    f1_p: "Start with a markdown file, move to SQLite, sync to Plane later — the calling code stays await sink.push(task).",
+    f2_h: "Idempotent by construction",
+    f2_p: "PlaneSink derives a stable external_id from your task id. Pushing the same task twice updates it — verified live: 13 tasks pushed twice, still 13 issues.",
+    f3_h: "Honest about the gaps",
+    f3_p: "Plane expects assignee to be a real user account — this library doesn't fake agent-as-assignee support. Assignee, story points and source go into the description as text.",
+    f4_h: "Library, not a service",
+    f4_p: "No server, no config file, no daemon. Just async functions and a Pydantic model.",
+    s_title: "Sinks", s_sub: "Three today. The TaskSink interface leaves room for more without breaking existing ones.",
+    s_col_sink: "sink", s_col_backend: "backend", s_col_notes: "notes",
+    s1_backend: "a markdown file", s1_notes: "Writes/updates a table row. Human-readable, not a full round-trip.",
+    s2_backend: "local SQLite file", s2_notes: "Full round-trip — every Task field survives push() → list().",
+    s3_notes: "Idempotent via external_id/external_source. list() filters to issues this library created.",
+    j_title: "No Jira / YouTrack adapters",
+    j_h2: "And that's on purpose",
+    j1: "Writing an integration against an API you can't test live against a real instance produces code nobody should trust. Rather than ship an untested guess, they're simply not here.",
+    j2: "The <code>TaskSink</code> interface is stable enough to add them later — contributions with a real instance to test against are welcome.",
+    i_title: "Install", i_sub: "Python 3.11+. No config file — pass credentials to the sink you use.",
+    ft_issues: "Report an issue",
+    ft_note: "Part of the Meldlane toolchain. No telemetry, no ads, no cloud beyond the sink you point it at."
+  },
+  ru: {
+    nav_features: "Возможности", nav_sinks: "Sinks", nav_install: "Установка", copy: "копир.",
+    hero_h1: 'Одна <span class="grad">Task</span>,<br>три места, где она живёт',
+    hero_sub: "Markdown-файл, локальная SQLite-база или проект в Plane — всё через один и тот же интерфейс push()/list(), так что твоему коду не нужно знать, куда именно попадает задача.",
+    badge_lib: "Библиотека, не сервис",
+    cta_github: "Открыть на GitHub", cta_install: "Установить",
+    f_title: "Зачем meldlane-tasks",
+    f_sub: "Один контракт, взаимозаменяемые бэкенды, идемпотентность по конструкции.",
+    f1_h: "Меняй бэкенд, не место вызова",
+    f1_p: "Начни с markdown-файла, перейди на SQLite, синхронизируй в Plane позже — вызывающий код остаётся await sink.push(task).",
+    f2_h: "Идемпотентность по конструкции",
+    f2_p: "PlaneSink получает стабильный external_id из id задачи. Повторный push той же задачи обновляет её — проверено вживую: 13 задач запушены дважды, issues по-прежнему 13.",
+    f3_h: "Честность про пробелы",
+    f3_p: "Plane ожидает, что assignee — реальный аккаунт пользователя — библиотека не изображает поддержку «агент как assignee». Исполнитель, story points и источник идут в описание текстом.",
+    f4_h: "Библиотека, не сервис",
+    f4_p: "Без сервера, без конфиг-файла, без демона. Просто async-функции и Pydantic-модель.",
+    s_title: "Sinks", s_sub: "Три сегодня. Интерфейс TaskSink оставляет место для новых, не ломая существующие.",
+    s_col_sink: "sink", s_col_backend: "хранилище", s_col_notes: "заметки",
+    s1_backend: "markdown-файл", s1_notes: "Пишет/обновляет строку таблицы. Человекочитаемо, не полный round-trip.",
+    s2_backend: "локальный SQLite-файл", s2_notes: "Полный round-trip — каждое поле Task переживает push() → list().",
+    s3_notes: "Идемпотентно через external_id/external_source. list() фильтрует issues, созданные этой библиотекой.",
+    j_title: "Нет адаптеров Jira / YouTrack",
+    j_h2: "И это осознанно",
+    j1: "Писать интеграцию против API, который негде проверить на живом инстансе, значит писать код, которому нельзя доверять. Вместо непроверенной догадки — их просто нет.",
+    j2: "Интерфейс <code>TaskSink</code> достаточно стабилен, чтобы добавить их позже — вклад с реальным инстансом для проверки приветствуется.",
+    i_title: "Установка", i_sub: "Python 3.11+. Без конфиг-файла — передавай учётные данные в конкретный sink.",
+    ft_issues: "Сообщить о проблеме",
+    ft_note: "Часть тулчейна Meldlane. Без телеметрии, рекламы и облака, кроме того sink'а, на который ты сам укажешь."
+  }
+};
+
+const toggle = document.getElementById("lang-toggle");
+function setLang(lang) {
+  const dict = I18N[lang];
+  document.documentElement.lang = lang;
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const k = el.dataset.i18n;
+    if (dict[k]) el.textContent = dict[k];
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach(el => {
+    const k = el.dataset.i18nHtml;
+    if (dict[k]) el.innerHTML = dict[k];
+  });
+  toggle.textContent = lang === "en" ? "RU" : "EN";
+  localStorage.setItem("mt-lang", lang);
+}
+toggle.addEventListener("click", () =>
+  setLang(document.documentElement.lang === "en" ? "ru" : "en"));
+setLang(localStorage.getItem("mt-lang") ||
+  ((navigator.language || "").toLowerCase().startsWith("ru") ? "ru" : "en"));
+</script>
+</body>
+</html>
